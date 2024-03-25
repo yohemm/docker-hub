@@ -1,0 +1,57 @@
+version: '3.9'
+services:
+  web:
+    build: 
+      context: .
+      dockerfile: DockerFile
+    image: web
+    env_file:
+      - path: ./.db.env
+        required: true
+    networks:
+      - webnet
+    # labels:
+    #   - "traefik.http.routers.web.rule=Host(`web.localhost`)"
+    #   - "traefik.http.routers.web.service=web-serv"
+    #   - "traefik.http.services.web-serv.loadbalancer.server.port=80"
+    ports:
+      - "80:80"
+
+  db:
+    image: postgres:16.2 
+    restart: always
+    shm_size: 128mb
+    container_name: bd
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    env_file:
+      - path: ./.db.env
+        required: true
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+    networks:
+      - webnet
+    ports:
+      - "${DB_PORT}:5432"
+
+
+  adminer:
+    image: adminer:4.8.1
+    container_name: adminer
+    networks:
+      - webnet
+    ports:
+      - "8080:8080"
+networks:
+  webnet:
+volumes:
+  db-data:
+    # new
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: './srv/dbdata'
